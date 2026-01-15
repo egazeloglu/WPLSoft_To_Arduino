@@ -96,3 +96,6 @@ result = M[0] satırının sonunda ki ';' noktalı virgülü sildim ve derledim.
 if(result) { D[10] = 100; } satırında if deyiminden i harfinin yazılamadığını varsaydım:
 
 Hata kontrol işlemi yukarıdan aşağıya doğru satır satır yapılmaktadır. bir den fazla hata olsa dahi ilk bulduğu hatayı işaretli olarak gösterir. Her hata düzeltildikten sonraki "Kod Kontrol" butonu ile yeniden DERLEME yapılmalıdır. En son hata düzeltilene kadar bu işleme devam edilmelidir.
+
+IL_To_Arduino indir (Download)
+https://drive.google.com/file/d/1fNcPnl6GMbmaJXXALc1zNqiBhfRGCJ0s/view?usp=sharing
