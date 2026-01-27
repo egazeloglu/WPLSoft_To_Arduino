@@ -1,26 +1,102 @@
-# WPLSoft_To_Arduino
-WPLSoft Ladder To Arduino UNO programmer
-Karmaşık Kodlara Son! WPLSoft ve Ladder Diyagramı ile Arduino Programlama
-    Yıllardır kumanda panoları kuran, Delta PLC dünyasına aşina olan bir elektrik teknisyeniyseniz, Arduino'nun dünyası size karmaşık görünebilir. Ancak artık void setup() veya void loop() satırları arasında kaybolmanıza gerek yok. Türkiye'de en yaygın kullanılan ve kaynağı en bol olan WPLSoft 2.0 arayüzünü kullanarak, tıpkı bir PLC programlar gibi Arduino'yu programlayacağız. Amacım, elinizdeki o güçlü mikrodenetleyiciyi, bildiğiniz 'elektrik dili' ile kontrol etmenizi sağlamak.
+# IL_To_Arduino (Instruction List ile Arduino)
+Instruction List ile Ladder To Arduino UNO programmer
+Karmaşık Kodlara Son! Instruction List ve Ladder Diyagramı ile Arduino Programlama
+    Yıllardır kumanda panoları kuran, PLC dünyasına aşina olan bir elektrik teknisyeniyseniz, Arduino'nun dünyası size karmaşık görünebilir. Ancak artık void setup() veya void loop() satırları arasında kaybolmanıza gerek yok. Türkiye'de en yaygın kullanılan ve kaynağı en bol olan Ladder dan Instruction List kodlarına dönüşüm yapabilen programların arayüzünü kullanarak, tıpkı bir PLC programlar gibi Arduino'yu programlayacağız. Amacım, elinizdeki o güçlü mikrodenetleyiciyi, bildiğiniz 'elektrik dili' ile kontrol etmenizi sağlamak.
 
 
-WPLSoft Ladder Örnek
+WPLSoft Ladder Örnek, WPLSoft IL dönüşümü
+000000,LDP,X0
+000003,SET,M1
+000004,LDF,X1
+000007,RST,M1
+000010,LDP,M1
+000013,MOV,K100,D0
+000018,ADD,D1,K1,D1
+000025,OUT,M0
+000026,LDP,M0
+000029,INC,D2
+000032,LD=,K100,D0
+000037,OUT,M0
+000038,LD>=,D1,K5
+000043,RST,M0
+000046,MOV,K0,D1
+000051,MOV,K0,D0
+000056,LD,M0
+000057,OUT,Y3
+000058,END
 
-WPLSoft IL dönüşümü
 
 
 Arduino UNO/MEGA Kod dönüşüm Arayüzü
+void loop() {
+  //  GIRIS SCAN ---
+  X0 = !digitalRead(Pin_X0);
+  X1 = !digitalRead(Pin_X1);
 
-
-IL to Arduino penceresi
+  updateClocks(); // M1011, M1012, M1013 saat üretimleri ---
+// Sistem Özel Röle Güncellemeleri ---
+  if (firstScan) { M1002 = true; M1003 = false; }
+  else { M1002 = false; M1003 = true; }
+// !!! /////////////////// ANA PROGRAM ///////////////////  ---
+// LDP Komutu ---
+  curr = X0; result = (curr && !X0_LastState); X0_LastState = curr; 
+// SET Komutu ---
+ if( result) { M[1] = HIGH; }
+// LDF Komutu ---
+ { curr = X1; result = (!curr && X1_LastState); X1_LastState = curr; }
+// RST Komutu ---
+ if(result) {
+  M[1] = false; 
+  M1_LastState = false; // Her PLS değişkeni için ---
+ }
+// LDP Komutu ---
+  curr = M[1]; result = (curr && !M1_LastState); M1_LastState = curr; 
+// MOV Komutu ---
+ if(result) { D[0] = 100; }
+// ADD Komutu ---
+ if(result) { D[1] = D[1] + 1; }
+// OUT Komutu ---
+  M[0] = result;
+// LDP Komutu ---
+  curr = M[0]; result = (curr && !M0_LastState); M0_LastState = curr; 
+// INC Komutu ---
+ if(result) { D[2] = D[2] + 1; }
+// LD= Komutu ---
+ result = (100 == D[0]);
+// OUT Komutu ---
+  M[0] = result;
+// LD>= Komutu ---
+ result = (D[1] >= 5);
+// RST Komutu ---
+ if(result) {
+  M[0] = false; 
+  M0_LastState = false; // Her PLS değişkeni için ---
+ }
+// MOV Komutu ---
+ if(result) { D[1] = 0; }
+// MOV Komutu ---
+ if(result) { D[0] = 0; }
+// LD Komutu ---
+ result = M[0];
+// OUT Komutu ---
+  Y3 = result;
+// END Komutu ---
+ //  ÇIKIŞ REFRESH ---
+  // RAM'deki Y0...Yn durumlarını fiziksel pinlere aktar ---
+  digitalWrite(Pin_Y0, Y0);
+ firstScan = false;
+ stackPtr = 0; // Stack temizle ---
+ return; // Döngüden çık ve Output Refresh'e git ---
+// !!! ////////////////// PROGRAM SONU /////////////////////////
+}
 
 🛠️ Yazılım Arayüzü: Karmaşıklıktan Sadeliğe
-Geliştirdiğim arayüz, WPLSoft'un endüstriyel gücü ile Arduino'nun esnekliğini tek bir ekranda birleştiriyor. Arayüzü, iş akışını en kolay hale getirecek şekilde iki ana bölüme ayırdım:
+Geliştirdiğim arayüz, Instruction List Kod Editörü 'un endüstriyel gücü ile Arduino'nun esnekliğini tek bir ekranda birleştiriyor. Arayüzü, iş akışını en kolay hale getirecek şekilde iki ana bölüme ayırdım:
 
 1. Sol Panel: Veri Girişi ve Dönüştürme
-Bu bölüm, Delta WPLSoft'tan aldığımız verilerin sisteme dahil edildiği yerdir:
+Bu bölüm, Delta Instruction List Kod Editörü'den aldığımız verilerin sisteme dahil edildiği yerdir:
 
-IL Kod Yükle: WPLSoft üzerinde yazdığınız programın .csv formatındaki Instruction List (Komut Listesi) dosyasını bu butonla yazılıma aktarırsınız.
+IL Kod Yükle: Instruction List Kod Editörü (PLC programlama Yazılımı) üzerinde yazdığınız programın .csv, .txt formatındaki Instruction List (Komut Listesi) dosyasını bu butonla yazılıma aktarırsınız.
 
 Arduino Çevir: Bu buton, projenin kalbidir. Yüklenen PLC komutlarını saniyeler içinde Arduino'nun anlayacağı C++ kodlarına dönüştürür ve sağdaki panelde görmenizi sağlar.
 
@@ -43,17 +119,14 @@ Alt Bölüm (Terminal): Derleme sürecini, hataları veya yükleme durumunu anl�
 
 Bu arayüzün tasarımı, bir elektrikçinin aşina olduğu "Giriş -> İşlem -> Çıkış" mantığına göre kurgulanmıştır. Sol taraf "Giriş" (IL Kodları), sağ taraf ise "Çıkış" (Arduino Programı) olarak düşünülebilir. 
 
-📑 Adım Adım: WPLSoft Projesini Arduino'ya Hazırlama
-WPLSoft'ta yazdığınız Ladder (Merdiven) diyagramını, hazırladığımız arayüze aktarmak için "Instruction List" (Komut Listesi) olarak dışa aktarmamız gerekiyor. İşte yapmanız gerekenler:
+📑 Adım Adım: Instruction List (IL) Kod Editörü Projesini Arduino'ya Hazırlama
+Instruction List (IL) Kod Editörü 'de yazdığınız Ladder (Merdiven) diyagramını, hazırladığımız arayüze aktarmak için "Instruction List" (Komut Listesi) olarak dışa aktarmamız gerekiyor. İşte yapmanız gerekenler:
 
 1. Programınızı Derleyin (Compile)
-WPLSoft'ta çiziminizi bitirdikten sonra mutlaka "Ctrl + F7" tuşlarına basarak veya araç çubuğundaki "Ladder to Instruction" ikonuna tıklayarak programı derleyin. Hata almadığınızdan emin olun.
+Instruction List (IL) Kod Editörü 'de çiziminizi bitirdikten sonra mutlaka "Ctrl + F7" tuşlarına basarak veya araç çubuğundaki "Ladder to Instruction" ikonuna tıklayarak programı derleyin. Hata almadığınızdan emin olun.
 
 2. Komut Listesi (IL) Görünümüne Geçin
 Programınız Ladder modundayken, üst menüden "View" (Görünüm) sekmesine gelin ve "Instruction List" seçeneğini seçin. Artık çiziminizin kod satırlarına dönüştüğünü göreceksiniz.
-
-
-
 
 3. CSV Olarak Kaydetme
 Hazırladığım arayüzün bu kodları okuyabilmesi için dosyayı Excel'in de tanıyabildiği .csv formatında kaydetmelisiniz:
@@ -62,10 +135,7 @@ Fare Sağ Click menüsüne gidin.
 
 Tümünü Seç
 
-
-
 Dosya türü olarak CSV (Comma Delimited) seçtiğinizden emin olun.
-
 
 
 Kaydet penceresi açılır. dosya adını yazıp uzantı "Kayıt Türü "olarak "CSV" seçili oladuğundan emin olunuz. 
